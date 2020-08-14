@@ -1,0 +1,276 @@
+---
+title: "Untitled"
+author: "David May"
+date: "August 13, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#load data
+RawData <- read.csv("C:/Users/dsmay/Box/DBS Balance Study/BESTest Data Edited.csv")
+
+#convert scores to percentage scores
+RawData$total.percent <- ((RawData$total.score/108)*100)
+RawData$section1.percent <- ((RawData$section1/15)*100)
+RawData$section2.percent <- ((RawData$section2/21)*100)
+RawData$section3.percent <- ((RawData$section3/18)*100)
+RawData$section4.percent <- ((RawData$section4/18)*100)
+RawData$section5.percent <- ((RawData$section5/15)*100)
+RawData$section6.percent <- ((RawData$section6/21)*100)
+
+#change event names to "on and off"
+RawData$redcap_event_name <- as.character(RawData$redcap_event_name)
+RawData[RawData$redcap_event_name == "baseline_off_arm_1", "redcap_event_name"] <- "OFF-Medication/OFF-DBS"
+RawData[RawData$redcap_event_name== "baseline_on_arm_1", "redcap_event_name"] <- "ON-Medication/ON-DBS"
+RawData$redcap_event_name <- as.factor(RawData$redcap_event_name)
+
+#Load demographic data
+DemoData <- read.csv("C:/Users/dsmay/Box/DBS Balance Study/Demographics Data 2.csv")
+
+#Create on and off demographic dataframes. Remove withdrawn participant from ON condition.
+DemoDataOFF <- DemoData[DemoData$Event.Name== "Baseline: OFF", ]
+DemoData <- DemoData[DemoData$Event.Name=="Baseline: ON", ]
+DemoData <- DemoData[DemoData$Participant.ID!="PTDBS_017", ]
+```
+
+
+```{r demographics, echo= FALSE}
+#Calculate demographic statistics.
+mean(DemoData$Age..years..at.baseline.visit)
+sd(DemoData$Age..years..at.baseline.visit)
+
+DemoData %>% 
+  group_by(Gender) %>%
+  summarise(length(Gender))
+
+mean(DemoData$Number.of.years.since.diagnosis.of.Parkinson.disease)
+sd(DemoData$Number.of.years.since.diagnosis.of.Parkinson.disease)
+
+mean(DemoData$Number.of.months.since.DBS.surgery..calculated., na.rm = TRUE)
+sd(DemoData$Number.of.months.since.DBS.surgery..calculated., na.rm= TRUE)
+
+mean(DemoData$UPDRS.III.Total.Score)
+sd(DemoData$UPDRS.III.Total.Score)
+
+mean(DemoDataOFF$UPDRS.III.Total.Score)
+sd(DemoDataOFF$UPDRS.III.Total.Score)
+
+
+```
+
+
+
+```{r normality/shapiro}
+#create a dataframe of off scores and on scores
+df.off = RawData[seq(2, nrow(RawData), 2), ]
+df.on = RawData[seq(1, nrow(RawData), 2), ]
+
+#test overall and section scores for normality, both on and off.
+shapiro.test(df.on$total.percent)
+shapiro.test(df.off$total.percent)
+
+shapiro.test(df.on$section1.percent)
+shapiro.test(df.off$section1.percent)
+
+shapiro.test(df.on$section2.percent)
+shapiro.test(df.off$section2.percent)
+
+shapiro.test(df.on$section3.percent)
+shapiro.test(df.off$section3.percent)
+
+shapiro.test(df.on$section4.percent)
+shapiro.test(df.off$section4.percent)
+
+shapiro.test(df.on$section5.percent)
+shapiro.test(df.off$section5.percent)
+
+shapiro.test(df.on$section6.percent)
+shapiro.test(df.off$section6.percent)
+
+```
+
+
+# **Total BESTest (Percentage) Score**
+```{r total score, echo=FALSE}
+#Total ON score
+mean(df.on$total.percent) 
+sd(df.on$total.percent)
+
+#Total OFF score
+mean(df.off$total.percent)
+sd(df.off$total.percent)
+
+#Run Wilcox Test due to normality assumption violation. 
+wilcox.test(x= df.off$total.percent, y=df.on$total.percent, paired=TRUE)
+
+#T-test for comparison only.
+t.test(df.on$total.percent, y = df.off$total.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Find Cohen's D
+diff.data <- (df.on$total.percent- df.off$total.percent)
+diff.data <- as.data.frame(diff.data)
+diff.data$total <- diff.data$diff.data
+cohendtotal<- ((mean(df.on$total.percent)-mean(df.off$total.percent))/sd(diff.data$total))
+cohendtotal
+
+#Find Cohen's D using other method
+#T-statistic divided by square root of N
+4.1247/(sqrt(29))
+```
+
+# **Biomechanical Constraints (Section 1)**
+```{r section1, echo=FALSE}
+#ON score
+mean(df.on$section1.percent)
+sd(df.on$section1.percent)
+
+#OFF score
+mean(df.off$section1.percent)
+sd(df.off$section1.percent)
+
+#Run Wilcox test. Normality assumption violated.
+wilcox.test(x=df.on$section1.percent, y= df.off$section1.percent, paired=TRUE)
+
+#T-test for comparison only.
+t.test(df.on$section1.percent, y = df.off$section1.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Find Cohen's D
+1.1879/(sqrt(29))
+diff.data$section1 <- (df.on$section1.percent-df.off$section1.percent)
+(mean(df.on$section1.percent)-mean(df.off$section1.percent))/(sd(diff.data$section1))
+```
+
+# **Stability Limits/Verticality (Section 2)**
+```{r, echo=FALSE}
+#ON score
+mean(df.on$section2.percent)
+sd(df.on$section2.percent)
+
+#OFF score
+mean(df.off$section2.percent)
+sd(df.off$section2.percent)
+
+#Use Wilcox test due to normality violation.
+wilcox.test(x=df.on$section2.percent, y=df.off$section2.percent, paired=TRUE)
+
+#T-test
+t.test(df.on$section2.percent, y = df.off$section2.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Cohen's D using t-statistic
+2.8953/(sqrt(29))
+```
+
+
+# **Anticipatory Postural Adjustments (Section 3)**
+```{r, echo=FALSE}
+#ON Score
+mean(df.on$section3.percent)
+sd(df.on$section3.percent)
+
+#OFF score
+mean(df.off$section3.percent)
+sd(df.off$section3.percent)
+
+#Use Wilcox test due to normality violation.
+wilcox.test(x= df.on$section3.percent, y=df.off$section3.percent, paired=TRUE)
+
+#T-test
+t.test(df.on$section3.percent, y = df.off$section3.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Cohen's D from t-statistic
+2.9584/(sqrt(29))
+```
+
+
+# **Postural Responses (Section 4)**
+```{r, echo=FALSE}
+#ON score
+mean(df.on$section4.percent)
+sd(df.on$section4.percent)
+
+#OFF score
+mean(df.off$section4.percent)
+sd(df.off$section4.percent)
+
+#Wilcox test for comparison only.
+wilcox.test(x=df.on$section4.percent, y=df.off$section4.percent, paired=TRUE)
+
+#Use paired t-test. Normality assumption not violated. 
+t.test(df.on$section4.percent, y = df.off$section4.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Cohen's d from t-statistic
+2.0398/(sqrt(29))
+```
+
+# **Sensory Orientation (Section 5)**
+```{r, echo=FALSE}
+#ON score
+mean(df.on$section5.percent)
+sd(df.on$section5.percent)
+
+#OFF score
+mean(df.off$section5.percent)
+sd(df.off$section5.percent)
+
+#Use Wilcox Test. Normality assumption violated.
+wilcox.test(x=df.on$section5.percent, y=df.off$section5.percent, paired=TRUE)
+
+#T-test
+t.test(df.on$section5.percent, y = df.off$section5.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Cohen's d from t-statistic
+3.3231/(sqrt(29))
+
+```
+
+
+# **Stability in Gait (Section 6)**
+```{r, echo=FALSE}
+#ON score
+mean(df.on$section6.percent)
+sd(df.on$section6.percent)
+
+#OFF score
+mean(df.off$section6.percent)
+sd(df.off$section6.percent)
+
+#Wilcox test for comparison only.
+wilcox.test(x=df.on$section6.percent, y=df.off$section6.percent, paired=TRUE)
+
+#Use paired t-test. Normality assumption not violated.
+t.test(df.on$section6.percent, y = df.off$section6.percent,
+       alternative = "two.sided",
+        paired = TRUE, var.equal = TRUE,
+       conf.level = 0.95)
+
+#Cohen's d calculated using t-statistic
+3.3767/(sqrt(29))
+```
+
+
+#Holm-Bonferroni Multiple comparisons correction
+```{r, echo= FALSE}
+p <- c(.3543, .0080, .0032, .0509, .0088, .0022)
+p.adjust(p, method="holm", n=6)
+
+```
